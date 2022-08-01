@@ -25,7 +25,7 @@ d3.csv("https://noahtb2.github.io/sp500data.csv",
 
   // When reading the csv, I must format variables:
   function(d){
-    return { date : d3.timeParse("%m/%d/%Y")(d.Date), value : d.SP500 }
+    return { date : d3.timeParse("%m/%d/%Y")(d.Date), value : d.Real}
   }).then(
 
   // Now I can use this dataset:
@@ -45,15 +45,15 @@ d3.csv("https://noahtb2.github.io/sp500data.csv",
     const x = d3.scaleTime()
       .domain(d3.extent(data, function(d) { return d.date; }))
       .range([ 0, width ]);
-    svg.append("g")
-      .attr("transform", `translate(0, ${height})`)
-      .call(d3.axisBottom(x));
+     const xAxis = svg.append("g")
+		.attr("transform", `translate(0, ${height})`)
+		.call(d3.axisBottom(x));
 
     // Add Y axis
     const y = d3.scaleLinear()
       .domain([0, d3.max(data, function(d) { return +d.value; })])
       .range([ height, 0 ]);
-    svg.append("g")
+    const yAxis = svg.append("g")
       .call(d3.axisLeft(y));
 
     // Add the line
@@ -75,7 +75,11 @@ d3.csv("https://noahtb2.github.io/sp500data.csv",
       const dataFilter = data.filter(function(d){return d.date< d3.timeParse("%m/%d/%Y")(range);})
 	console.log.dataFilter;
       // Give these new data to update line
-      line
+      x.domain([d3.timeParse("%m/%d/%Y")("01/01/1900"),d3.timeParse("%m/%d/%Y")(range)])	
+	  y.domain([0, d3.max(dataFilter, function(d) { return +d.value; })])
+	  xAxis.transition().duration(1000).call(d3.axisBottom(x))
+	  yAxis.transition().duration(1000).call(d3.axisLeft(y))
+	  line
           .datum(dataFilter)
           .transition()
           .duration(1000)
@@ -86,19 +90,8 @@ d3.csv("https://noahtb2.github.io/sp500data.csv",
 			.x(function(d) { return x(d.date) })
 			.y(function(d) { return y(d.value) })
 			)
-	   x = d3.scaleTime()
-		.domain(d3.extent(data, function(d) { return d.date; }))
-		.range([ 0, width ]);
-		svg.append("g")
-		.attr("transform", `translate(0, ${height})`)
-		.call(d3.axisBottom(x));
+		
 
-    // Add Y axis
-	   y = d3.scaleLinear()
-		.domain([0, d3.max(data, function(d) { return +d.value; })])
-		.range([ height, 0 ]);
-		svg.append("g")
-		.call(d3.axisLeft(y));
     }	
 	d3.select("#selectButton").on("change", function(event,d) {
         // recover the option that has been chosen
