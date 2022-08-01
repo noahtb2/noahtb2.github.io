@@ -2,42 +2,43 @@
 <script src='https://d3js.org/d3.v5.min.js'></script>
 
 <div id="my_dataviz"></div>
+
 <script>
 
 // set the dimensions and margins of the graph
-var margin = {top: 10, right: 30, bottom: 30, left: 60},
-    width = 460 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
+const margin = {top: 10, right: 30, bottom: 30, left: 60},
+    width = 1500 - margin.left - margin.right,
+    height = 700 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
-var svg = d3.select("#my_dataviz")
+const svg = d3.select("#my_dataviz")
   .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
-    .attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")");
-		  
-d3.csv("https://noahtb2.github.io/sp500data.csv")  
-		  
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+//Read the data
+d3.csv("https://noahtb2.github.io/sp500data1.csv",
+
   // When reading the csv, I must format variables:
   function(d){
-    return { date : d3.timeParse("%Y-%m-%d")(d.date), value : d.sp500 }
-  },
+    return { date : d3.timeParse("%m/%d/%Y")(d.Date), value : d.SP500 }
+  }).then(
 
   // Now I can use this dataset:
   function(data) {
 
     // Add X axis --> it is a date format
-    var x = d3.scaleTime()
+    const x = d3.scaleTime()
       .domain(d3.extent(data, function(d) { return d.date; }))
       .range([ 0, width ]);
     svg.append("g")
-      .attr("transform", "translate(0," + height + ")")
+      .attr("transform", `translate(0, ${height})`)
       .call(d3.axisBottom(x));
 
     // Add Y axis
-    var y = d3.scaleLinear()
+    const y = d3.scaleLinear()
       .domain([0, d3.max(data, function(d) { return +d.value; })])
       .range([ height, 0 ]);
     svg.append("g")
@@ -55,7 +56,6 @@ d3.csv("https://noahtb2.github.io/sp500data.csv")
         )
 
 })
-
 </script>
 </body>
 </html>
