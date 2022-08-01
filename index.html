@@ -1,5 +1,7 @@
 <html>
+<body>
 <script src='https://d3js.org/d3.v5.min.js'></script>
+<select id="selectButton"></select>
 
 <div id="my_dataviz"></div>
 
@@ -19,7 +21,7 @@ const svg = d3.select("#my_dataviz")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
 //Read the data
-d3.csv("https://noahtb2.github.io/sp500data1.csv",
+d3.csv("https://noahtb2.github.io/sp500data.csv",
 
   // When reading the csv, I must format variables:
   function(d){
@@ -28,7 +30,17 @@ d3.csv("https://noahtb2.github.io/sp500data1.csv",
 
   // Now I can use this dataset:
   function(data) {
+	 const allGroup = (["01/01/1950","01/01/2000","01/01/2018"])
 
+    // add the options to the button
+    d3.select("#selectButton")
+      .selectAll('myOptions')
+     	.data(allGroup)
+      .enter()
+    	.append('option')
+      .text(function (d) { return d; }) // text showed in the menu
+      .attr("value", function (d) { return d; })
+	  
     // Add X axis --> it is a date format
     const x = d3.scaleTime()
       .domain(d3.extent(data, function(d) { return d.date; }))
@@ -45,7 +57,9 @@ d3.csv("https://noahtb2.github.io/sp500data1.csv",
       .call(d3.axisLeft(y));
 
     // Add the line
-    svg.append("path")
+    const line = svg
+	  .append('g')
+	  .append("path")
       .datum(data)
       .attr("fill", "none")
       .attr("stroke", "steelblue")
@@ -54,8 +68,49 @@ d3.csv("https://noahtb2.github.io/sp500data1.csv",
         .x(function(d) { return x(d.date) })
         .y(function(d) { return y(d.value) })
         )
+	
+	function update(range) {
+
+      // Create new data with the selection?
+      const dataFilter = data.filter(function(d){return d.date< d3.timeParse("%m/%d/%Y")(range);})
+	console.log.dataFilter;
+      // Give these new data to update line
+      line
+          .datum(dataFilter)
+          .transition()
+          .duration(1000)
+          .attr("fill", "none")
+		  .attr("stroke", "steelblue")
+		  .attr("stroke-width", 1.5)
+		  .attr("d", d3.line()
+			.x(function(d) { return x(d.date) })
+			.y(function(d) { return y(d.value) })
+			)
+	   x = d3.scaleTime()
+		.domain(d3.extent(data, function(d) { return d.date; }))
+		.range([ 0, width ]);
+		svg.append("g")
+		.attr("transform", `translate(0, ${height})`)
+		.call(d3.axisBottom(x));
+
+    // Add Y axis
+	   y = d3.scaleLinear()
+		.domain([0, d3.max(data, function(d) { return +d.value; })])
+		.range([ height, 0 ]);
+		svg.append("g")
+		.call(d3.axisLeft(y));
+    }	
+	d3.select("#selectButton").on("change", function(event,d) {
+        // recover the option that has been chosen
+        const selectedOption = d3.select(this).property("value")
+		console.log.selectOption;
+        // run the updateChart function with this selected option
+        update(selectedOption)
+    })
 
 })
+
 </script>
+
 </body>
 </html>
