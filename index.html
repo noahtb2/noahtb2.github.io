@@ -1,106 +1,295 @@
 <html>
+<style>
+div {
+  width: 1200px;
+  border: 5px solid steelblue;
+  padding: 10px;
+  margin: 20px;
+}
+body {
+  font: 16px sans-serif;
+}
+.capture {
+  fill: none;
+  pointer-events: all;
+}
+
+.focus circle {
+  fill: red;
+}
+</style>
 <body>
 <script src='https://d3js.org/d3.v5.min.js'></script>
-<select id="selectButton"></select>
-
+<button id = "button1">1900-1950</button>
+<button id = "button2">1950-2000</button>
+<button id = "button3">2000-Current</button>
+<button id = "button4">1900-Current</button>
+<button id = "button5">Toggle Inflation Adjustment</button>
 <div id="my_dataviz"></div>
+<div id="d1" >
+	<h id="header1"></h>
+	<p id="para1"></p>
+</div>
 
 <script>
 
 // set the dimensions and margins of the graph
-const margin = {top: 10, right: 30, bottom: 30, left: 60},
-    width = 1500 - margin.left - margin.right,
-    height = 700 - margin.top - margin.bottom;
+const margin = {top: 30, right: 110, bottom: 50, left: 110},
+	width = 1200 - margin.left - margin.right,
+	height = 400 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
 const svg = d3.select("#my_dataviz")
-  .append("svg")
+	.append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
-  .append("g")
+	.append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
+	
+const bisectDate = d3.bisector(function(d) { return d.date; }).left, formatDate = d3.timeFormat("%m/%d/%Y"),
+    formatValue = d3.format(",.2f");
+	
 
 //Read the data
 d3.csv("https://noahtb2.github.io/sp500data.csv",
 
-  // When reading the csv, I must format variables:
-  function(d){
-    return { date : d3.timeParse("%m/%d/%Y")(d.Date), value : d.Real}
-  }).then(
+	function(d){
+		return { date : d3.timeParse("%m/%d/%Y")(d.Date), value : d.SP500, cpi : d.ConsumerPriceIndex, dvd: d.Dividend, realP: d.RealPrice}
+	}).then(
 
-  // Now I can use this dataset:
-  function(data) {
-	 const allGroup = (["01/01/1950","01/01/2000","01/01/2018"])
+	function(data) {
 
-    // add the options to the button
-    d3.select("#selectButton")
-      .selectAll('myOptions')
-     	.data(allGroup)
-      .enter()
-    	.append('option')
-      .text(function (d) { return d; }) // text showed in the menu
-      .attr("value", function (d) { return d; })
-	  
     // Add X axis --> it is a date format
     const x = d3.scaleTime()
-      .domain(d3.extent(data, function(d) { return d.date; }))
-      .range([ 0, width ]);
-     const xAxis = svg.append("g")
+		.domain(d3.extent(data, function(d) { return d.date; }))
+		.range([ 0, width ]);
+	const xAxis = svg.append("g")
 		.attr("transform", `translate(0, ${height})`)
 		.call(d3.axisBottom(x));
-
+		
     // Add Y axis
     const y = d3.scaleLinear()
-      .domain([0, d3.max(data, function(d) { return +d.value; })])
-      .range([ height, 0 ]);
+		.domain([0, d3.max(data, function(d) { return +d.value; })])
+		.range([ height, 0 ]);
     const yAxis = svg.append("g")
-      .call(d3.axisLeft(y));
+		.attr("color","black")
+		.call(d3.axisLeft(y));
 
+		
+    const y2 = d3.scaleLinear()
+		.domain([0, d3.max(data, function(d) { return +d.realP; })])
+		.range([ height, 0 ]);
+    const y2Axis = svg.append("g")
+		.attr("id", "y2axis")
+		.attr("color","green")
+		.attr("transform","translate(" +width+ ",0)")
+        .call(d3.axisRight(y2));
+		
+	const title = svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 2.5 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+        .text("S&P 500 Historical Price");	
+				
+	const xLabel = svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", height+ margin.bottom)
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+        .text("Year");	
+			
+	const yLabel = svg.append("text")
+        .attr("x",-(height/2))             
+        .attr("y", -(margin.left/2)-15)
+        .attr("text-anchor", "middle") 
+		.attr("transform","rotate(-90)")
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline") 		
+        .text("S&P 500 Price (USD)");
+		
+	const y2Label = svg.append("text")
+		.attr("id","y2label")
+        .attr("x",(height/2))             
+        .attr("y",-width-(margin.left/2)-15)
+        .attr("text-anchor", "middle") 
+		.attr("transform","rotate(90)")
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline") 		
+        .text("S&P 500 Price Adjusted (2018 USD)")
+		.attr("fill","green");	
+		
     // Add the line
     const line = svg
-	  .append('g')
-	  .append("path")
-      .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 1.5)
-      .attr("d", d3.line()
-        .x(function(d) { return x(d.date) })
-        .y(function(d) { return y(d.value) })
-        )
-	
-	function update(range) {
-
-      // Create new data with the selection?
-      const dataFilter = data.filter(function(d){return d.date< d3.timeParse("%m/%d/%Y")(range);})
-	console.log.dataFilter;
-      // Give these new data to update line
-      x.domain([d3.timeParse("%m/%d/%Y")("01/01/1900"),d3.timeParse("%m/%d/%Y")(range)])	
-	  y.domain([0, d3.max(dataFilter, function(d) { return +d.value; })])
-	  xAxis.transition().duration(1000).call(d3.axisBottom(x))
-	  yAxis.transition().duration(1000).call(d3.axisLeft(y))
-	  line
-          .datum(dataFilter)
-          .transition()
-          .duration(1000)
-          .attr("fill", "none")
-		  .attr("stroke", "steelblue")
-		  .attr("stroke-width", 1.5)
-		  .attr("d", d3.line()
+		.append('g')
+		.append("path")
+		.datum(data)
+		.attr("fill", "none")
+		.attr("stroke", "black")
+		.attr("stroke-width", 1.5)
+		.attr("d", d3.line()
 			.x(function(d) { return x(d.date) })
 			.y(function(d) { return y(d.value) })
-			)
+        )
+    const line2 = svg
+		.append('g')
+		.append("path")
+		.datum(data)
+		.attr("id", "y2")
+		.attr("fill", "none")
+		.attr("stroke", "green")
+		.attr("stroke-width", 1.5)
+		.attr("d", d3.line()
+			.x(function(d) { return x(d.date) })
+			.y(function(d) { return y(d.realP) })
+        )
+
+	
+	function update(v,v2) {
+
+		// Create new data with the selection?
+		const dataFilter = data.filter(function(d){if (d.date< d3.timeParse("%m/%d/%Y")(v2) && d.date> d3.timeParse("%m/%d/%Y")(v)){return d.date;}})
+			// Give these new data to update line
+			x.domain([d3.timeParse("%m/%d/%Y")(v),d3.timeParse("%m/%d/%Y")(v2)])	
+			y.domain([0, d3.max(dataFilter, function(d) { return +d.value; })])
+			y2.domain([0, d3.max(dataFilter, function(d) { return Math.max(+d.realP); })])
+			xAxis.transition().duration(1000).call(d3.axisBottom(x))
+			yAxis.transition().duration(1000).call(d3.axisLeft(y))
+			y2Axis.transition().duration(1000).call(d3.axisRight(y2))
 		
+		line
+			.datum(dataFilter)
+			.transition()
+			.duration(1000)
+			.attr("fill", "none")
+			.attr("stroke", "black")
+			.attr("stroke-width", 1.5)
+			.attr("d", d3.line()
+				.x(function(d) { return x(d.date) })
+				.y(function(d) { return y(d.value) })
+			)
+		line2
+			.datum(dataFilter)
+			.transition()
+			.duration(1000)
+			.attr("fill", "none")
+			.attr("stroke", "green")
+			.attr("stroke-width", 1.5)
+			.attr("d", d3.line()
+				.x(function(d) { return x(d.date) })
+				.y(function(d) { return y2(d.realP) })
+			)
 
     }	
-	d3.select("#selectButton").on("change", function(event,d) {
-        // recover the option that has been chosen
-        const selectedOption = d3.select(this).property("value")
-		console.log.selectOption;
-        // run the updateChart function with this selected option
-        update(selectedOption)
+	d3.select("#button1").on("click", function(event,d) {
+        update("01/01/1900","01/01/1950")
+		const h = document.getElementById("header1");
+		const p = document.getElementById("para1");
+		h.innerHTML = "<i>Period Shown: 1900-1950</i>";
+		p.textContent = "Here we see the beginning of modern stock trading and the effects of the speculative trading in the Roaring 20's. The graph shows the rapid bubble inflation and the following collapse, now known as Black Thursday, which marked the start of the Great Depression. Furthermore, notice the 'cheap' prices of the index in this early period. Toggle the Inflation Adjuster to compare that to modern currency (2018 Dollars)."; 
+		
     })
+	d3.select("#button2").on("click", function(event,d) {
+        update("01/01/1950","01/01/2000")
+		const h = document.getElementById("header1");
+		const p = document.getElementById("para1");
+		h.innerHTML = "<i>Period Shown: 1950-2000</i>";
+		p.textContent = "The latter half of the 20th Century produced tremendous growth in the stock market. However, some periods such as the stagflation in the 70's created negative real growth (inflation adjusted). Use the data cursor and compare the Consumer Price Index (CPI) over the years see inflationary periods. Notice the rapid price increase in the 90's. This is the beginning of the DotCom era and the basis of tech stock trading we see today."; 
+		
+    })	
+	d3.select("#button3").on("click", function(event,d) {
+        update("01/01/2000","04/01/2018")
+		const h = document.getElementById("header1");
+		const p = document.getElementById("para1");
+		h.innerHTML = "<i>Period Shown: 2000-2018</i>";
+		p.textContent = "The 2000's began with the DotCom bubble burst which saw stocks lose half of their value over 2 years. In 2008, after reaching nearly the same highs, the market collapsed due to the housing crisis. Now, change the period to '1900-Current' to see how investors have fared over the long run."; 
+		
+    })
+	d3.select("#button4").on("click", function(event,d) {
+        update("01/01/1900","04/01/2018")
+		const h = document.getElementById("header1");
+		const p = document.getElementById("para1");
+		h.innerHTML = "<i>Period Shown: 1900-2018</i>";
+		p.textContent = "Despite the cycles of bubbles and recessions, investors have gained over the long run in both nominal and real terms. Now use the data cursor and compare the growth of dividends, quarterly payouts from profitable companies, over the dataset. These payouts, on top of the capital gains, are a large source of income for many investors."; 
+		
+    })
+	d3.select("#button5").on("click", function(event,d) {
+        const active   = y2.active ? false : true,
+		newOpacity = active ? 0 : 1;
+		d3.select("#y2").style("opacity", newOpacity);
+		d3.select("#y2axis").style("opacity", newOpacity);
+		d3.select("#y2label").style("opacity", newOpacity);
+		y2.active = active;
+    })
+  
+	const focus = svg.append("g")
+		.attr("class", "focus")
+		.style("display", "none");
 
+	focus.append("circle")
+		.attr("r", 4.5);
+	  
+	focus.append("rect")
+		.attr("class", "tooltip")
+		.attr("fill","white")
+		.attr("stroke", "red")
+		.attr("stroke-width",2)
+        .attr("width", 100)
+        .attr("height", 60)
+        .attr("x",12)
+        .attr("y", -25)
+        .attr("rx", 4)
+        .attr("ry", 4);
+
+	focus.append("text")
+		.attr("font-size",10)
+		.attr('class', 't1')
+		.attr("x", 15)
+		.attr("dy", ".35em");
+	
+	focus.append("text")
+		.attr("font-size",10)
+		.attr('class', 't2')
+		.attr("x", 15)
+		.attr("dy", -15);
+	  
+	focus.append("text")
+		.attr("font-size",10)
+		.attr('class', 't3')
+		.attr("x", 15)
+		.attr("dy", 15);
+	  
+	focus.append("text")
+		.attr("font-size",10)
+		.attr('class', 't4')
+		.attr("x", 15)
+		.attr("dy", 30);
+
+	svg.append("rect")
+		.attr("class", "capture")
+		.attr("width", width)
+		.attr("height", height)
+		.on("mouseover", function() { focus.style("display", null); })
+		.on("mouseout", function() { focus.style("display", "none"); })
+		.on("mousemove", mousemove);
+
+	function mousemove() {
+		var org = x.invert(d3.mouse(this)[0]),
+		i = bisectDate(data, org, 1),
+        d0 = data[i - 1],
+        d1 = data[i],
+        d = org - d0.date > d1.date - org ? d1 : d0;
+		focus.attr("transform", "translate(" + x(d.date) + "," + y(d.value) + ")");
+		focus.select("text.t1").text("Price:\n" +formatValue(d.value));
+		focus.select("text.t2").text("Date:\n " + formatDate(d.date));
+		focus.select("text.t3").text("CPI:\n " + formatValue(d.cpi));
+		focus.select("text.t4").text("Dividend(USD):" + formatValue(d.dvd));
+  }
+	
+button1.click()
+button5.click()	
 })
 
 </script>
